@@ -1,0 +1,6 @@
+@deadlock_demo_real_time_events_HostAddress = http://localhost:5103
+
+GET {{deadlock_demo_real_time_events_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
