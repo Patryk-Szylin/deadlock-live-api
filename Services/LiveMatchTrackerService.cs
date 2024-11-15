@@ -1,11 +1,11 @@
 ﻿
 using StackExchange.Redis;
 
-public class LiveMatchTracker
+public class LiveMatchTrackerService
 {
     private readonly IDatabase _database;
 
-    public LiveMatchTracker(IConnectionMultiplexer redis)
+    public LiveMatchTrackerService(IConnectionMultiplexer redis)
     {
         _database = redis.GetDatabase();
     }
