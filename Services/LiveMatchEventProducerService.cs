@@ -1,18 +1,18 @@
 ﻿
 using Confluent.Kafka;
 
+/**
+ * Service to produce live match events to Kafka
+ */
 public class LiveMatchEventProducerService
 {
     private readonly IProducer<string, string> _producer;
-    private readonly string _bootstrapServers;
-    
+
     public LiveMatchEventProducerService(string bootstrapServers)
     {
-        _bootstrapServers = bootstrapServers;
-
         var config = new ProducerConfig
         {
-            BootstrapServers = _bootstrapServers
+            BootstrapServers = bootstrapServers
         };
 
         _producer = new ProducerBuilder<string, string>(config).Build();

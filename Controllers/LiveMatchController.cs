@@ -6,53 +6,37 @@ using Microsoft.AspNetCore.Mvc;
 [Route("api/matches/")]
 public class LiveMatchController : Controller
 {
-    private readonly DeadlockService _deadlockService;
-    private readonly LiveMatchTrackerService _matchTrackerService;
-    private readonly LiveMatchEventStreamerService _eventStreamer;
+    private readonly LiveStreamManager _manager;
     
-    // Constructor to inject the DeadlockService
-    public LiveMatchController(DeadlockService deadlockService, LiveMatchTrackerService matchTrackerService, LiveMatchEventStreamerService eventStreamer)
+    public LiveMatchController(LiveStreamManager manager)
     {
-        _deadlockService = deadlockService;
-        _matchTrackerService = matchTrackerService;
-        _eventStreamer = eventStreamer;
+        _manager = manager;
     }   
     
     // TODO: Add auth guard for API Keys
-    /**
-     * Initiates the process of hooking up to a live game and receive events
-     */
-    [HttpPost("{matchId}/watch")]
-    public async Task<IActionResult> WatchLiveGame([FromRoute] string matchId)
+    [HttpPost("{matchId}/start-stream")]
+    public async Task<IActionResult> StartMatch(string matchId)
     {
-        if (await _matchTrackerService.IsMatchActiveAsync(matchId))
+        if (await _manager.IsStreamOpened(matchId))
         {
-            return Conflict("Match is already being watched.");
+            return Conflict($"Match {matchId} is already being watched.");
         }
 
-        // Should be executed in callback function when we initiate the streaming process. Streaming task should allow for callback.
-        await _matchTrackerService.StartMatchAsync(matchId);
-        return Ok($"Started watching match {matchId}.");
+        await _manager.StartLiveStream(matchId);
+        return Ok($"Started match {matchId}");
     }
-    
-    [HttpPost("{matchId}/stop")]
-    public async Task<IActionResult> StopMatch(string matchId)
+
+    [HttpPost("{matchId}/stop-stream")]
+    public async Task<IActionResult> StopStream(string matchId)
     {
-        if (!await _matchTrackerService.IsMatchActiveAsync(matchId))
+        var isActive = await _manager.IsStreamOpened(matchId);
+        if (!isActive)
         {
-            return NotFound("Match is not currently being watched.");
+            return NotFound($"Match {matchId} is not being watched.");
         }
 
-        // Should be executed in callback function for stream connection closed when we initiate the streaming process. Streaming task should allow for callback.
-        await _matchTrackerService.StopMatchAsync(matchId);
-        return Ok($"Stopped watching match {matchId}.");
-    }
-    
-    [HttpPost("{matchId}/stream")]
-    public async Task<IActionResult> StreamMatch(string matchId, CancellationToken cancellationToken)
-    {
-        await _eventStreamer.StreamEventsAsync(matchId, cancellationToken);
-        return Ok($"Streaming events for match {matchId}");
+        _manager.StopStream(matchId);
+        return Ok($"Stopped match {matchId}");
     }
 
     [HttpGet]

@@ -4,9 +4,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<DeadlockService>();
-builder.Services.AddScoped<LiveMatchTrackerService>();
-builder.Services.AddScoped<LiveMatchEventStreamerService>();
+
+builder.Services.AddSingleton<LiveMatchTrackerService>();
+builder.Services.AddSingleton<LiveMatchEventStreamerService>();
+builder.Services.AddHostedService<LiveMatchStreamWorker>();
+builder.Services.AddSingleton<LiveStreamManager>();
+
 
 builder.Services.AddControllers();
 // Add Redis connection

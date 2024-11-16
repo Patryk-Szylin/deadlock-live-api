@@ -1,6 +1,9 @@
 ﻿
 using System.Text.Json;
 
+/**
+ * Service to stream live match events to Kafka.
+ */
 public class LiveMatchEventStreamerService
 {
     private readonly LiveMatchEventProducerService _kafkaProducerService;
