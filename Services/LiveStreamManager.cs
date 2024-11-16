@@ -1,25 +1,27 @@
-﻿
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
 public class LiveStreamManager
 {
     private readonly LiveMatchTrackerService _trackerService;
     private readonly LiveMatchEventStreamerService _eventStreamer;
+    private readonly EventCallbackRegistryService _eventCallbackRegistry;
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeStreams;
 
-    public LiveStreamManager(LiveMatchTrackerService trackerService, LiveMatchEventStreamerService eventStreamer)
+    public LiveStreamManager(LiveMatchTrackerService trackerService, EventCallbackRegistryService eventCallbackRegistry,
+        LiveMatchEventStreamerService eventStreamer)
     {
         _trackerService = trackerService;
         _eventStreamer = eventStreamer;
+        _eventCallbackRegistry = eventCallbackRegistry;
         _activeStreams = new ConcurrentDictionary<string, CancellationTokenSource>();
     }
 
-    public async Task StartLiveStream(string matchId)
+    public Task StartLiveStream(string matchId)
     {
-        if (await _trackerService.IsStreamActiveAsync(matchId))
+        if (_activeStreams.ContainsKey(matchId))
         {
             Console.WriteLine($"Match {matchId} is already active.");
-            return;
+            return Task.CompletedTask;
         }
 
         var cts = new CancellationTokenSource();
@@ -27,11 +29,27 @@ public class LiveStreamManager
 
         _ = Task.Run(async () =>
         {
+            var session = new LiveDeadlockStreamSession(_eventStreamer, _eventCallbackRegistry, matchId, cts.Token);
+
+            // TODO: Handle:
+            // 1. Match not found
             try
             {
                 Console.WriteLine($"Starting match {matchId}...");
-                await _trackerService.StartLiveGameAsync(matchId);
-                await _eventStreamer.StreamEventsAsync(matchId, cts.Token);
+                await session.WatchGame(() =>
+                {
+                    // Record the match in redis.
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _trackerService.StartLiveGameAsync(matchId);
+                        } catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                        }
+                    }, default);
+                });
             }
             catch (OperationCanceledException)
             {
@@ -41,9 +59,10 @@ public class LiveStreamManager
             {
                 _activeStreams.TryRemove(matchId, out _);
                 await _trackerService.StopMatchAsync(matchId);
-                Console.WriteLine($"Stopped match {matchId}.");
+                Console.WriteLine($"Stopped streaming match: {matchId}.");
             }
         }, cts.Token);
+        return Task.CompletedTask;
     }
 
     public void StopStream(string matchId)

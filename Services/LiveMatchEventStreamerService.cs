@@ -13,26 +13,13 @@ public class LiveMatchEventStreamerService
         _kafkaProducerService = kafkaProducerService;
     }
     
-    public async Task StreamEventsAsync(string matchId, CancellationToken cancellationToken)
+    public async Task SendEventAsync<T>(T eventObj, string matchId, string eventName, Func<T, object> createPayload)
     {
-        // Simulate streaming events
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var eventData = new
-            {
-                MatchId = matchId,
-                EventTime = DateTime.UtcNow,
-                EventType = "GameUpdate",
-                Payload = "Some event data"
-            };
+        var payload = createPayload(eventObj);
+        var eventPayload = JsonSerializer.Serialize(payload);
 
-            var message = JsonSerializer.Serialize(eventData);
-            await _kafkaProducerService.PublishEventAsync($"game-streams-{matchId}", matchId, message);
-
-            Console.WriteLine($"Published event for match {matchId}");
-            await Task.Delay(1000, cancellationToken); // Simulate event frequency
-        }
+        Console.WriteLine($"{eventName} with payload: {JsonSerializer.Serialize(payload)}");
+        
+        await _kafkaProducerService.PublishEventAsync($"game-streams-{matchId}", eventName, eventPayload);
     }
-    
-    
 }

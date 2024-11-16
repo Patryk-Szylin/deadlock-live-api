@@ -12,7 +12,8 @@ public class LiveMatchStreamWorker : BackgroundService
     {
         _serviceProvider = serviceProvider;
     }
-    
+   
+    // TODO: How to handle this across multiple nodes?
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         Console.WriteLine("LiveMatchStreamWorker started.");
@@ -31,7 +32,8 @@ public class LiveMatchStreamWorker : BackgroundService
                 // TODO: Batch Request to Redis
                 foreach (var matchId in activeMatches)
                 {
-                    if (!manager.IsStreamOpened(matchId).Result)
+                    bool isStreamActive = await trackerService.IsStreamActiveAsync(matchId);
+                    if (isStreamActive)
                     {
                         Console.WriteLine($"Resuming stream for match {matchId}...");
                         await manager.StartLiveStream(matchId);

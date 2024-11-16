@@ -9,6 +9,7 @@ builder.Services.AddSingleton<LiveMatchTrackerService>();
 builder.Services.AddSingleton<LiveMatchEventStreamerService>();
 builder.Services.AddHostedService<LiveMatchStreamWorker>();
 builder.Services.AddSingleton<LiveStreamManager>();
+builder.Services.AddSingleton<EventCallbackRegistryService>();
 
 
 builder.Services.AddControllers();
